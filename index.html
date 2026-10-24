@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>AniTrack & GameLog Pro</title>
+    <style>
+        body {
+            background-color: #0f0f17;
+            color: #fffffe;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 30px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { color: #ff8906; text-transform: uppercase; letter-spacing: 2px; margin: 0; }
+        .stats { background: #1f1f2e; padding: 8px 16px; border-radius: 20px; font-size: 14px; color: #a7a9be; border: 1px solid #2e2f3e; }
+        
+        .form-box {
+            background: #1f1f2e;
+            padding: 20px;
+            border-radius: 12px;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #2e2f3e;
+        }
+        .form-box input.full-width { grid-column: 1 / -1; }
+        
+        input, select, button {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #2e2f3e;
+            font-size: 14px;
+            outline: none;
+        }
+        input, select { background: #0f0f17; color: #fff; }
+        input:focus, select:focus { border-color: #ff8906; }
+        
+        .add-btn {
+            grid-column: 1 / -1;
+            background: #e53170;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: 0.2s;
+        }
+        .add-btn:hover { background: #ff4d88; transform: translateY(-2px); }
+        .add-btn:disabled { background: #555; cursor: wait; }
+
+        .filters { display: flex; gap: 10px; margin-bottom: 25px; }
+        .filter-btn {
+            background: #1f1f2e;
+            color: #a7a9be;
+            border: 1px solid #2e2f3e;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: 0.2s;
+        }
+        .filter-btn.active, .filter-btn:hover { background: #ff8906; color: #0f0f17; font-weight: bold; border-color: #ff8906; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .card {
+            background: #1f1f2e;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #2e2f3e;
+            position: relative;
+            transition: 0.25s;
+            display: flex;
+            flex-direction: column;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.4); border-color: #ff8906; }
+        
+        .card-img { width: 100%; height: 280px; object-fit: cover; display: block; }
+        .card-fallback {
+            width: 100%; height: 280px;
+            background: linear-gradient(135deg, #2e2f3e 0%, #0f0f17 100%);
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; box-sizing: border-box; text-align: center;
+            color: #ff8906; font-weight: bold; font-size: 20px;
+            border-bottom: 1px solid #2e2f3e;
+        }
+
+        .card-body { padding: 15px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .card h3 { margin: 0 0 10px 0; font-size: 18px; word-break: break-word; }
+        
+        .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+        .badge { background: #2e2f3e; padding: 4px 8px; border-radius: 6px; font-size: 12px; color: #fffffe; }
+        .badge.status { background: rgba(229, 49, 112, 0.2); color: #ff4d88; border: 1px solid rgba(229, 49, 112, 0.4); }
+        
+        .rating { color: #ff8906; font-weight: bold; font-size: 15px; }
+        .delete-btn {
+            position: absolute; top: 10px; right: 10px; z-index: 2;
+            background: rgba(15, 15, 23, 0.85); color: #fff;
+            border: none; border-radius: 50%; width: 32px; height: 32px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .delete-btn:hover { background: #e53170; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ Мой Трекер Тайтлов</h1>
+            <div class="stats" id="statsCounter">Всего: 0</div>
+        </div>
+        
+        <div class="form-box">
+            <input type="text" id="titleInput" placeholder="Название (например, Clannad, Steins;Gate, Ведьмак 3)">
+            <select id="typeInput">
+                <option value="Аниме">🎬 Аниме</option>
+                <option value="Игра">🎮 Игра</option>
+            </select>
+            <select id="statusInput">
+                <option value="Пройдено">✅ Пройдено</option>
+                <option value="В процессе">🔥 В процессе</option>
+                <option value="В планах">⏳ В планах</option>
+            </select>
+            <input type="number" id="rateInput" placeholder="Оценка (1-10)" min="1" max="10">
+            <input type="text" id="imgInput" class="full-width" placeholder="Своя ссылка на постер (оставь пустым — сайт сам найдет обложку автоматически!)">
+            <button class="add-btn" id="addBtn" onclick="addItem()">+ Добавить в коллекцию</button>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" onclick="setFilter('Все', this)">Все</button>
+            <button class="filter-btn" onclick="setFilter('Аниме', this)">🎬 Аниме</button>
+            <button class="filter-btn" onclick="setFilter('Игра', this)">🎮 Игры</button>
+        </div>
+
+        <div class="grid" id="itemsGrid"></div>
+    </div>
+
+    <script>
+        let items = JSON.parse(localStorage.getItem('myTrackerData')) || [];
+        let currentFilter = 'Все';
+
+        function render() {
+            const grid = document.getElementById('itemsGrid');
+            const stats = document.getElementById('statsCounter');
+            grid.innerHTML = '';
+
+            const filtered = items.filter(item => currentFilter === 'Все' || item.type === currentFilter);
+            stats.innerText = `Показано: ${filtered.length} из ${items.length}`;
+
+            filtered.forEach((item) => {
+                const realIndex = items.indexOf(item);
+                const statusText = item.status || 'Пройдено';
+                
+                const mediaBlock = item.img 
+                    ? `<img class="card-img" src="${item.img}" onerror="this.outerHTML='<div class=\\'card-fallback\\'>${item.title}</div>'">`
+                    : `<div class="card-fallback">${item.title}</div>`;
+
+                grid.innerHTML += `
+                    <div class="card">
+                        <button class="delete-btn" onclick="removeItem(${realIndex})" title="Удалить">✖</button>
+                        ${mediaBlock}
+                        <div class="card-body">
+                            <div>
+                                <h3>${item.title}</h3>
+                                <div class="badges">
+                                    <span class="badge">${item.type}</span>
+                                    <span class="badge status">${statusText}</span>
+                                </div>
+                            </div>
+                            <div class="rating">★ Оценка: ${item.rate}/10</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function fetchPoster(title, type) {
+            try {
+                const res = await fetch(`https://jikan.moe{encodeURIComponent(title)}&limit=1`);
+                const data = await res.json();
+                if (data.data && data.data.length > 0) {
+                    return data.data[0].images.jpg.large_image_url;
+                }
+            } catch (e) {
+                console.log('Автопоиск не сработал, ставим стильную обложку');
+            }
+            return '';
+        }
+
+        async function addItem() {
+            const title = document.getElementById('titleInput').value.trim();
+            const type = document.getElementById('typeInput').value;
+            const status = document.getElementById('statusInput').value;
+            const rate = document.getElementById('rateInput').value || '?';
+            let img = document.getElementById('imgInput').value.trim();
+            const btn = document.getElementById('addBtn');
+
+            if (!title) return alert('Введи название тайтла!');
+
+            if (!img) {
+                btn.disabled = true;
+                btn.innerText = '🔍 Ищем обложку...';
+                img = await fetchPoster(title, type);
+                btn.disabled = false;
+                btn.innerText = '+ Добавить в коллекцию';
+            }
+
+            items.unshift({ title, type, status, rate, img });
+            localStorage.setItem('myTrackerData', JSON.stringify(items));
+            
+            document.getElementById('titleInput').value = '';
+            document.getElementById('rateInput').value = '';
+            document.getElementById('imgInput').value = '';
+            render();
+        }
+
+        function removeItem(index) {
+            items.splice(index, 1);
+            localStorage.setItem('myTrackerData', JSON.stringify(items));
+            render();
+        }
+
+        function setFilter(filter, btn) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            render();
+        }
+
+        render();
+    </script>
+</body>
+</html>
